@@ -1,0 +1,17 @@
+# PyTorch Implementation Requirements
+# Tested with Python 3.8+
+
+# Core dependencies
+torch>=2.0.0
+numpy>=1.24.0,<2.0.0
+scipy>=1.10.0
+h5py>=3.8.0
+
+# Optional: For faster data loading
+# tqdm>=4.65.0
+
+# Note: Install PyTorch with CUDA support if you have a GPU:
+# pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+#
+# For CPU-only:
+# pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
