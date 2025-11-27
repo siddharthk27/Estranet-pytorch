@@ -77,6 +77,7 @@ class ProgressTracker:
         self.total_steps = total_steps
         self.log_interval = log_interval
         self.start_time = time.time()
+        self.last_time = time.time()  # Initialize last_time
         self.step_times = []
         self.max_history = 100  # Keep last 100 step times for ETA calculation
         
@@ -88,11 +89,10 @@ class ProgressTracker:
         elapsed = current_time - self.start_time
         
         # Store step time for better ETA estimation
-        if len(self.step_times) > 0:
-            step_time = current_time - self.last_time
-            self.step_times.append(step_time)
-            if len(self.step_times) > self.max_history:
-                self.step_times.pop(0)
+        step_time = current_time - self.last_time
+        self.step_times.append(step_time)
+        if len(self.step_times) > self.max_history:
+            self.step_times.pop(0)
         
         self.last_time = current_time
         
@@ -100,11 +100,11 @@ class ProgressTracker:
         progress = (current_step / self.total_steps) * 100
         
         # Estimate time remaining
-        if len(self.step_times) > 0:
+        if len(self.step_times) >= 2:  # Need at least 2 measurements
             avg_step_time = sum(self.step_times) / len(self.step_times)
             steps_remaining = self.total_steps - current_step
             eta_seconds = avg_step_time * steps_remaining
-            eta = timedelta(seconds=int(eta_seconds))
+            eta = str(timedelta(seconds=int(eta_seconds)))
         else:
             eta = "calculating..."
         

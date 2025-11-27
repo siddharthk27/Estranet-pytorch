@@ -48,6 +48,15 @@ EARLY_STOPPING_PATIENCE=10      # Stop if no improvement for 10 evaluations
 EARLY_STOPPING_DELTA=0.0001     # Minimum improvement threshold
 DISABLE_EARLY_STOPPING=false    # Set to true to disable early stopping
 
+echo "========================================"
+echo "EstraNet Training Script"
+echo "========================================"
+echo "Dataset: ${DATASET}"
+echo "Data path: ${DATA_PATH}"
+echo "Mode: $1"
+echo "========================================"
+echo ""
+
 if [[ $1 == 'train' ]]; then
     EARLY_STOP_FLAG=""
     if [[ "$DISABLE_EARLY_STOPPING" == "true" ]]; then
