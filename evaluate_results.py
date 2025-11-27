@@ -15,22 +15,57 @@ PLOT = True
 
 def load_predictions(path):
     """
-    Load results.txt and reshape to (n_samples, 256).
-    Handles either single-line or multi-line whitespace/tab-separated numbers.
+    Robust loader for results.txt that expects 256 values per prediction.
+    Behaviors:
+      - If file parses as a 2D array with second dim == 256, return it.
+      - Otherwise, parse all numeric tokens and reshape into full (n,256) rows,
+        dropping any trailing incomplete values (with a warning).
     """
-    arr = np.loadtxt(path, dtype=float)  # will produce 1D or 2D; assume 1D
-    if arr.ndim == 2:
-        # maybe the file had rows - if the second dimension is 256 good, else flatten
-        if arr.shape[1] == 256:
+    import numpy as np
+    import io
+
+    # Try the standard fast approach first (works if each line has 256 numbers)
+    try:
+        arr = np.loadtxt(path, dtype=float)
+        # If loadtxt returned 2D and second dim == 256, we're done
+        if arr.ndim == 2 and arr.shape[1] == 256:
+            print(f"[load_predictions] Loaded {arr.shape[0]} rows x 256 cols with np.loadtxt.")
             return arr
-        else:
-            arr = arr.flatten()
-    total = arr.size
-    if total % 256 != 0:
-        raise ValueError(f"Number of values ({total}) is not divisible by 256.")
-    n_samples = total // 256
-    preds = arr.reshape((n_samples, 256))
+        # If loadtxt returned 1D, or 2D with unexpected columns, fallthrough to robust parsing
+    except Exception as e:
+        # np.loadtxt sometimes fails for ragged rows or strange spacing; fall back
+        print(f"[load_predictions] np.loadtxt failed or returned unexpected shape: {e}. Falling back to tolerant parser.")
+
+    # Tolerant parser: read all numeric tokens and reshape into full 256-vectors
+    with open(path, 'r', encoding='utf-8') as f:
+        text = f.read()
+
+    if text.strip() == "":
+        raise ValueError(f"{path} is empty or contains no numeric data.")
+
+    # Parse all floats from the file (whitespace separated)
+    try:
+        all_vals = np.fromstring(text, sep=' ')
+        # np.fromstring accepts any whitespace as separator if sep=' ' is given
+    except Exception as e:
+        raise ValueError(f"Could not parse numeric values from {path}: {e}")
+
+    total = all_vals.size
+    full_rows = total // 256
+    remainder = total - full_rows * 256
+
+    if full_rows == 0:
+        raise ValueError(f"No full 256-length prediction rows found in {path}. Total numeric tokens = {total}")
+
+    if remainder != 0:
+        print(f"[load_predictions] WARNING: Found {total} numeric tokens. Keeping {full_rows} full rows "
+              f"({full_rows*256} values) and dropping {remainder} trailing values that don't make a full 256-vector.")
+    else:
+        print(f"[load_predictions] Parsed {full_rows} full rows (exact division).")
+
+    preds = all_vals[: full_rows * 256].reshape((full_rows, 256)).astype(float)
     return preds
+
 
 def load_metadata_bytes(h5file, group='Profiling_traces', byte_index=2):
     """
