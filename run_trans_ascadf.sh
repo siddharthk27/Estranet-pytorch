@@ -43,7 +43,17 @@ HEAD_INIT='forward'
 # Evaluation config
 MAX_EVAL_BATCH=100
 
+# Early stopping config
+EARLY_STOPPING_PATIENCE=10      # Stop if no improvement for 10 evaluations
+EARLY_STOPPING_DELTA=0.0001     # Minimum improvement threshold
+DISABLE_EARLY_STOPPING=false    # Set to true to disable early stopping
+
 if [[ $1 == 'train' ]]; then
+    EARLY_STOP_FLAG=""
+    if [[ "$DISABLE_EARLY_STOPPING" == "true" ]]; then
+        EARLY_STOP_FLAG="--disable_early_stopping"
+    fi
+    
     python train_trans.py \
         --data_path=${DATA_PATH} \
         --dataset=${DATASET} \
@@ -78,6 +88,9 @@ if [[ $1 == 'train' ]]; then
         --head_initialization=${HEAD_INIT} \
         --softmax_attn \
         --max_eval_batch=${MAX_EVAL_BATCH} \
+        --early_stopping_patience=${EARLY_STOPPING_PATIENCE} \
+        --early_stopping_delta=${EARLY_STOPPING_DELTA} \
+        ${EARLY_STOP_FLAG} \
         --do_train
 
 elif [[ $1 == 'test' ]]; then

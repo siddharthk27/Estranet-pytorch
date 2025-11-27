@@ -31,6 +31,14 @@ For more details, refer to the [paper](https://tches.iacr.org/index.php/TCHES/ar
 - Uses PyTorch's DataLoader instead of `tf.data.Dataset`
 - Native PyTorch optimizers and learning rate schedulers
 
+### Enhanced Training Features
+- **Progress Tracking**: Real-time progress bar with elapsed time and ETA
+- **Early Stopping**: Automatic training termination when validation loss stops improving
+- **Best Model Saving**: Automatically saves the best performing model
+- **Detailed Logging**: Enhanced training output with formatted metrics
+- **GPU Information**: Displays GPU name and CUDA version when available
+- **Checkpoint Resume**: Tracks elapsed time and best validation loss across sessions
+
 ### Implementation Notes
 - Random feature projection matrices are generated using PyTorch's QR decomposition
 - Attention mechanisms use PyTorch's `einsum` operations
@@ -134,10 +142,44 @@ python train_trans.py \
     --train_batch_size=16 \
     --eval_batch_size=16 \
     --train_steps=400000 \
-    --n_layer=2 \
-    --d_model=128 \
-    --n_head=8 \
+    --early_stopping_patience=10 \
     --do_train
+```
+
+### Early Stopping
+
+The training script includes automatic early stopping to prevent overfitting:
+
+```bash
+# Train with early stopping (stops if no improvement for 10 evaluations)
+python train_trans.py --early_stopping_patience=10 --do_train ...
+
+# Disable early stopping
+python train_trans.py --disable_early_stopping --do_train ...
+
+# Adjust sensitivity (minimum improvement threshold)
+python train_trans.py --early_stopping_delta=0.001 --do_train ...
+```
+
+### Progress Tracking
+
+During training, you'll see:
+- Real-time progress bar
+- Elapsed time
+- Estimated time to completion (ETA)
+- Current learning rate
+- Gradient norms
+- Training and validation losses
+
+Example output:
+```
+================================================================================
+Step [  2000/400000] | Epoch 1
+================================================================================
+Progress: ██░░░░░░░░░░░░░░░░░░░░░░░░░░░░ 0.5% | Elapsed: 0:05:23 | ETA: 17:45:12
+Learning Rate: 5.00e-05 | Grad Norm: 2.134 | Train Loss: 3.2456
+  → Validation improved! New best: 3.1234
+  ✓ Saved best model (loss: 3.1234)
 ```
 
 ---
@@ -159,10 +201,21 @@ EstraNet consists of:
 
 ## Results
 
-Results are saved in the format specified by `--result_path`:
-- `results.txt`: Key ranks for each trace
-- `checkpoint.pt`: Model checkpoint
-- `loss.pkl`: Training loss history
+Results are saved in the format specified by `--checkpoint_dir`:
+- `checkpoint.pt`: Latest model checkpoint with full training state
+- `best_model.pt`: Best performing model based on validation loss
+- `loss.pkl`: Training loss history with timestamps
+- `results.txt`: Key ranks for each trace (evaluation only)
+
+### Checkpoint Contents
+
+The checkpoint files contain:
+- Model state dict
+- Optimizer state dict
+- Current training step
+- Loss history
+- Best validation loss
+- Elapsed training time (for accurate ETA on resume)
 
 ---
 
