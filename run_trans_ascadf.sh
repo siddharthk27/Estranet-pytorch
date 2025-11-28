@@ -7,7 +7,8 @@ CKP_DIR="./"
 RESULT_PATH="results"
 
 # Optimization config
-LEARNING_RATE=2.5e-4
+# This syntax means: Use the env variable if set, otherwise use default
+LEARNING_RATE=${LEARNING_RATE:-0.00025}
 CLIP=0.25
 MIN_LR_RATIO=0.004
 INPUT_LENGTH=10000  # or 40000
