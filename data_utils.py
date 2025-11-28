@@ -5,6 +5,11 @@ import h5py
 import os
 import sys
 
+# --- GLOBAL CONSTANTS FOR NORMALIZATION ---
+# Calculated from the diagnostic run on the training set
+ASCAD_MEAN = -11.5721
+ASCAD_STD = 25.7763
+# ------------------------------------------
 
 class ASCADDataset(Dataset):
     """PyTorch Dataset for ASCAD datasets."""
@@ -22,6 +27,8 @@ class ASCADDataset(Dataset):
             split_key = 'Attack_traces'
 
         # Load traces and labels
+        # Note: We load them as raw integers here to save memory, 
+        # normalization happens on-the-fly in __getitem__
         self.traces = corpus[split_key]['traces'][:, :(self.input_length + self.data_desync)]
         self.labels = np.reshape(corpus[split_key]['labels'][()], [-1])
         self.labels = self.labels.astype(np.int64)
@@ -68,6 +75,12 @@ class ASCADDataset(Dataset):
         else:
             trace = trace[:self.input_length]
 
+        # --- NORMALIZATION STEP ADDED HERE ---
+        # Formula: (x - mean) / std
+        # Since mean is negative (-11.57), this effectively adds ~11.57
+        trace = (trace - ASCAD_MEAN) / ASCAD_STD
+        # -------------------------------------
+
         trace = torch.from_numpy(trace.astype(np.float32))
         label = torch.tensor(label, dtype=torch.long)
 
@@ -76,20 +89,7 @@ class ASCADDataset(Dataset):
 
 def get_dataloader(data_path, split, input_length, batch_size,
                    data_desync=0, shuffle=True, num_workers=4):
-    """Create DataLoader for ASCAD dataset.
-
-    Args:
-        data_path: Path to h5 file
-        split: 'train' or 'test'
-        input_length: Length of input traces
-        batch_size: Batch size
-        data_desync: Maximum desynchronization for data augmentation
-        shuffle: Whether to shuffle data
-        num_workers: Number of worker processes
-
-    Returns:
-        DataLoader instance
-    """
+    """Create DataLoader for ASCAD dataset."""
     dataset = ASCADDataset(data_path, split, input_length, data_desync)
 
     dataloader = DataLoader(
@@ -113,21 +113,14 @@ if __name__ == '__main__':
     batch_size = int(sys.argv[2])
     split = sys.argv[3]
 
-    dataset = ASCADDataset(data_path, split, input_length=5000)
-
-    print(f"traces shape    : {dataset.traces.shape}")
-    print(f"labels shape    : {dataset.labels.shape}")
-    print(f"plaintext shape : {dataset.plaintexts.shape}")
-    print(f"keys shape      : {dataset.keys.shape}")
-    print(f"traces dtype    : {dataset.traces.dtype}")
-    print()
-
-    dataloader = get_dataloader(data_path, split, 5000, batch_size, shuffle=True)
-
+    # Test run
+    dataloader = get_dataloader(data_path, split, 700, batch_size, shuffle=True)
+    
+    print("Checking data normalization...")
     for i, (traces, labels) in enumerate(dataloader):
-        if i >= 1:
-            break
-        print(f"Batch traces shape: {traces.shape}, labels shape: {labels.shape}")
-        print(f"Batch traces dtype: {traces.dtype}, labels dtype: {labels.dtype}")
-        print(f"Sample trace values: {traces[0, :10]}")
-        print(f"Sample labels: {labels}")
+        print(f"Batch traces shape: {traces.shape}")
+        print(f"Mean: {traces.mean():.4f} (Should be ~0.0)")
+        print(f"Std : {traces.std():.4f} (Should be ~1.0)")
+        print(f"Min : {traces.min():.4f}")
+        print(f"Max : {traces.max():.4f}")
+        break
